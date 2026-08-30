@@ -108,13 +108,22 @@ export function generateScalePositions(rootPc, formula) {
 // root differ. This intentionally does not use the generic anchor/walk
 // algorithm: that produced technically-in-key but unrealistic, uneven box
 // widths for sparse scales, whereas these are the actual shapes players use.
+//
+// The source chart draws its 5 boxes in an order that does not start on
+// root — its first box has root merely tied for the lowest fret on one
+// string, not leading on every string. Renumbered here so Position 1 is
+// unambiguously root-first (root sits on the lowest fret of every string
+// that plays it, e.g. both E strings at fret 5 for A minor pentatonic),
+// with the chart's own first box moved to the end (+12 frets, one full
+// cycle up) as Position 5, since it's really the next iteration of the
+// cycle rather than a true starting shape.
 const PENTATONIC_REFERENCE_ROOT_PC = 9; // A
 const PENTATONIC_SHAPES = [
-  [[3, 5], [3, 5], [2, 5], [2, 5], [3, 5], [3, 5]],
   [[5, 8], [5, 7], [5, 7], [5, 7], [5, 8], [5, 8]],
   [[8, 10], [7, 10], [7, 10], [7, 9], [8, 10], [8, 10]],
   [[10, 12], [10, 12], [10, 12], [9, 12], [10, 13], [10, 12]],
   [[12, 15], [12, 15], [12, 14], [12, 14], [13, 15], [12, 15]],
+  [[15, 17], [15, 17], [14, 17], [14, 17], [15, 17], [15, 17]],
 ];
 
 /**

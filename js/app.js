@@ -1,5 +1,10 @@
 import { NOTE_NAMES, SCALE_FORMULAS, ARPEGGIO_FORMULAS, CHORD_FORMULAS } from './music-theory.js';
-import { generateScalePositions, generateArpeggioPositions, generateChordVoicings } from './pattern-generator.js';
+import {
+  generateScalePositions,
+  generatePentatonicPositions,
+  generateArpeggioPositions,
+  generateChordVoicings,
+} from './pattern-generator.js';
 import { initFretboard, renderOverlays } from './fretboard-renderer.js';
 
 const FORMULA_SETS = {
@@ -19,8 +24,9 @@ const GENERATORS = {
 // which of these an overlay is assigned.
 const OVERLAY_COLORS = ['#3a5a6b', '#8a6d3f', '#5c3a5c', '#3f5d43', '#a15c2e', '#556070', '#7a3b4a'];
 
-// Pentatonic scales use CAGED-style 2-note-per-string boxes instead of 3NPS.
-const CAGED_SCALES = new Set(['Major Pentatonic', 'Minor Pentatonic']);
+// Pentatonic scales use fixed, chart-verified CAGED-style shapes instead of
+// the generic scale-position algorithm (see generatePentatonicPositions).
+const PENTATONIC_QUALITIES = new Set(['Major Pentatonic', 'Minor Pentatonic']);
 
 const rootSelect = document.getElementById('root-select');
 const typeSelect = document.getElementById('type-select');
@@ -53,11 +59,10 @@ function populatePositions() {
   const rootPc = Number(rootSelect.value);
   const formulas = FORMULA_SETS[typeSelect.value];
   const formula = formulas[qualitySelect.value];
-  const generate = GENERATORS[typeSelect.value];
   currentPositions =
-    typeSelect.value === 'scale' && CAGED_SCALES.has(qualitySelect.value)
-      ? generate(rootPc, formula, 2)
-      : generate(rootPc, formula);
+    typeSelect.value === 'scale' && PENTATONIC_QUALITIES.has(qualitySelect.value)
+      ? generatePentatonicPositions(rootPc, qualitySelect.value)
+      : GENERATORS[typeSelect.value](rootPc, formula);
 
   if (currentPositions.length === 0) {
     positionSelect.innerHTML = '<option value="">No positions available</option>';

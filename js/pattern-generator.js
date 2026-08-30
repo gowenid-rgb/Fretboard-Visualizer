@@ -71,12 +71,12 @@ function isCompleteBox(notes, cap) {
  * 7 positions, one per scale degree, in strictly ascending neck order.
  * Position N starts on the Nth scale degree (Position 1 = root), matching
  * the "position 2 starts one note above the root" convention from the spec.
- *
- * `notesPerString` defaults to 3 (3NPS boxes, used for 7-note scales/modes).
- * Pentatonic scales pass 2 to produce CAGED-style 2-note-per-string boxes
- * instead (5 positions rather than 7, matching the CAGED reference chart).
+ * Used for 7-note scales/modes, which build clean 3-notes-per-string boxes.
+ * Pentatonic scales use generatePentatonicPositions instead — a generic
+ * "walk the fretboard" algorithm doesn't reproduce the specific hand-shapes
+ * players actually use for pentatonic boxes.
  */
-export function generateScalePositions(rootPc, formula, notesPerString = 3) {
+export function generateScalePositions(rootPc, formula) {
   const pitchClasses = formulaToPitchClasses(rootPc, formula);
   const perString = eligibleFretsPerString(pitchClasses);
   const positions = [];
@@ -85,16 +85,70 @@ export function generateScalePositions(rootPc, formula, notesPerString = 3) {
     const pc = pitchClasses[degree];
     const anchor = nextAnchor(perString[0], pc, prevAnchor);
     if (anchor === null) break;
-    const notes = walkBox(perString, anchor, notesPerString, rootPc);
+    const notes = walkBox(perString, anchor, 3, rootPc);
     // Once a box runs off the edge of the fretboard, every later (higher)
     // position would too — stop rather than show a half-cut-off shape.
-    if (!isCompleteBox(notes, notesPerString)) break;
+    if (!isCompleteBox(notes, 3)) break;
     positions.push({
       label: `Position ${positions.length + 1} (starts on ${INTERVAL_NAMES[formula[degree]]})`,
       startFret: anchor,
       notes,
     });
     prevAnchor = anchor;
+  }
+  return positions;
+}
+
+// The 5 canonical pentatonic box shapes, digitized directly from a
+// published A-minor-pentatonic fingering chart (fret numbers per string,
+// low E to high E, referenced to root A = pitch class 9). A major
+// pentatonic scale contains exactly the same notes as its relative minor
+// pentatonic (three semitones below), so it uses these same 5 physical
+// shapes too — only the transposition amount and which note lands on the
+// root differ. This intentionally does not use the generic anchor/walk
+// algorithm: that produced technically-in-key but unrealistic, uneven box
+// widths for sparse scales, whereas these are the actual shapes players use.
+const PENTATONIC_REFERENCE_ROOT_PC = 9; // A
+const PENTATONIC_SHAPES = [
+  [[3, 5], [3, 5], [2, 5], [2, 5], [3, 5], [3, 5]],
+  [[5, 8], [5, 7], [5, 7], [5, 7], [5, 8], [5, 8]],
+  [[8, 10], [7, 10], [7, 10], [7, 9], [8, 10], [8, 10]],
+  [[10, 12], [10, 12], [10, 12], [9, 12], [10, 13], [10, 12]],
+  [[12, 15], [12, 15], [12, 14], [12, 14], [13, 15], [12, 15]],
+];
+
+/**
+ * 5 positions using the fixed canonical shapes above, transposed to the
+ * given root. `quality` is 'Major Pentatonic' or 'Minor Pentatonic'.
+ */
+export function generatePentatonicPositions(rootPc, quality) {
+  const shapeRootPc = quality === 'Major Pentatonic' ? (rootPc - 3 + 12) % 12 : rootPc;
+  const shift = (shapeRootPc - PENTATONIC_REFERENCE_ROOT_PC + 12) % 12;
+
+  const positions = [];
+  for (let i = 0; i < PENTATONIC_SHAPES.length; i++) {
+    const shape = PENTATONIC_SHAPES[i];
+    const maxBaseFret = Math.max(...shape.flat());
+    if (maxBaseFret + shift > FRET_COUNT) continue; // shape would run off the edge of the neck
+
+    const notes = [];
+    for (let s = 0; s < NUM_STRINGS; s++) {
+      for (const baseFret of shape[s]) {
+        const fret = baseFret + shift;
+        notes.push({ string: s, fret, isRoot: noteAt(s, fret) === rootPc });
+      }
+    }
+
+    const lowestFret = Math.min(...notes.map((n) => n.fret));
+    const lowestNotes = notes.filter((n) => n.fret === lowestFret);
+    const labelNote = lowestNotes.find((n) => n.isRoot) ?? lowestNotes[0];
+    const interval = (noteAt(labelNote.string, labelNote.fret) - rootPc + 12) % 12;
+
+    positions.push({
+      label: `Position ${i + 1} (starts on ${INTERVAL_NAMES[interval]})`,
+      startFret: lowestFret,
+      notes,
+    });
   }
   return positions;
 }

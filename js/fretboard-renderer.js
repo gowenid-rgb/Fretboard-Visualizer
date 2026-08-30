@@ -30,8 +30,11 @@ function fretX(fret) {
   return MARGIN_LEFT + fret * FRET_WIDTH - FRET_WIDTH / 2;
 }
 
+// String index 0 is the low E (thickest, lowest-pitched) string. Rendered
+// at the bottom of the board and working up to the high E at the top,
+// matching how a player looks down at their own fretboard.
 function stringY(stringIndex) {
-  return MARGIN_TOP + stringIndex * STRING_GAP;
+  return MARGIN_TOP + (NUM_STRINGS - 1 - stringIndex) * STRING_GAP;
 }
 
 /** Builds the static fretboard (strings/frets/inlays) inside `container` and returns handles for rendering overlays. */
@@ -47,8 +50,8 @@ export function initFretboard(container) {
   });
   svg.classList.add('fretboard-svg');
 
-  const boardTop = stringY(0);
-  const boardBottom = stringY(NUM_STRINGS - 1);
+  const boardTop = stringY(NUM_STRINGS - 1);
+  const boardBottom = stringY(0);
 
   // Inlay markers (drawn first, underneath everything).
   for (let f = 1; f <= FRET_COUNT; f++) {

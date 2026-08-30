@@ -24,8 +24,8 @@ const GENERATORS = {
 // which of these an overlay is assigned.
 const OVERLAY_COLORS = ['#3a5a6b', '#8a6d3f', '#5c3a5c', '#3f5d43', '#a15c2e', '#556070', '#7a3b4a'];
 
-// Pentatonic scales use fixed, chart-verified CAGED-style shapes instead of
-// the generic scale-position algorithm (see generatePentatonicPositions).
+// Pentatonic scales cycle through exactly 5 positions (the standard "5
+// shapes" convention) instead of one position per scale degree.
 const PENTATONIC_QUALITIES = new Set(['Major Pentatonic', 'Minor Pentatonic']);
 
 const rootSelect = document.getElementById('root-select');
@@ -59,10 +59,11 @@ function populatePositions() {
   const rootPc = Number(rootSelect.value);
   const formulas = FORMULA_SETS[typeSelect.value];
   const formula = formulas[qualitySelect.value];
-  currentPositions =
+  const generate =
     typeSelect.value === 'scale' && PENTATONIC_QUALITIES.has(qualitySelect.value)
-      ? generatePentatonicPositions(rootPc, qualitySelect.value)
-      : GENERATORS[typeSelect.value](rootPc, formula);
+      ? generatePentatonicPositions
+      : GENERATORS[typeSelect.value];
+  currentPositions = generate(rootPc, formula);
 
   if (currentPositions.length === 0) {
     positionSelect.innerHTML = '<option value="">No positions available</option>';

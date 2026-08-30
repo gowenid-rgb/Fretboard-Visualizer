@@ -99,83 +99,27 @@ export function generateScalePositions(rootPc, formula) {
   return positions;
 }
 
-// The 5 canonical pentatonic box shapes, digitized directly from a
-// published A-minor-pentatonic fingering chart (fret numbers per string,
-// low E to high E, referenced to root A = pitch class 9). A major
-// pentatonic scale contains exactly the same notes as its relative minor
-// pentatonic (three semitones below), so it uses these same 5 physical
-// shapes too — only the transposition amount and which note lands on the
-// root differ. This intentionally does not use the generic anchor/walk
-// algorithm: that produced technically-in-key but unrealistic, uneven box
-// widths for sparse scales, whereas these are the actual shapes players use.
-//
-// The source chart draws its 5 boxes in an order that does not start on
-// root — its first box has root merely tied for the lowest fret on one
-// string, not leading on every string. Renumbered here so Position 1 is
-// unambiguously root-first (root sits on the lowest fret of every string
-// that plays it, e.g. both E strings at fret 5 for A minor pentatonic),
-// with the chart's own first box moved to the end (+12 frets, one full
-// cycle up) as Position 5, since it's really the next iteration of the
-// cycle rather than a true starting shape.
-const PENTATONIC_REFERENCE_ROOT_PC = 9; // A
-const PENTATONIC_SHAPES = [
-  [[5, 8], [5, 7], [5, 7], [5, 7], [5, 8], [5, 8]],
-  [[8, 10], [7, 10], [7, 10], [7, 9], [8, 10], [8, 10]],
-  [[10, 12], [10, 12], [10, 12], [9, 12], [10, 13], [10, 12]],
-  [[12, 15], [12, 15], [12, 14], [12, 14], [13, 15], [12, 15]],
-  [[15, 17], [15, 17], [14, 17], [14, 17], [15, 17], [15, 17]],
-];
-
 /**
- * 5 positions using the fixed canonical shapes above, transposed to the
- * given root. `quality` is 'Major Pentatonic' or 'Minor Pentatonic'.
+ * Cycles anchors through the formula's own degrees (root, then the next
+ * degree, wrapping and climbing the neck), building a 2-notes-per-string
+ * box at each anchor via the same fixed-anchor walkBox used elsewhere.
+ * Because the anchor is always the fixed floor for every string, root is
+ * guaranteed to be the box's lowest note whenever a position's anchor
+ * degree is the root — this is what gives pentatonic Position 1 the
+ * classic "root leads on every string that plays it" shape (e.g. both E
+ * strings at fret 5 for A minor pentatonic — verified directly against a
+ * published fingering chart) without needing any hand-authored shape
+ * table: it falls out of the anchor algorithm applied to the scale's own
+ * formula, independently, for whichever root and quality is selected.
+ * Stops after `maxPositions` or when a box would run off the fretboard.
  */
-export function generatePentatonicPositions(rootPc, quality) {
-  const shapeRootPc = quality === 'Major Pentatonic' ? (rootPc - 3 + 12) % 12 : rootPc;
-  const shift = (shapeRootPc - PENTATONIC_REFERENCE_ROOT_PC + 12) % 12;
-
-  const positions = [];
-  for (let i = 0; i < PENTATONIC_SHAPES.length; i++) {
-    const shape = PENTATONIC_SHAPES[i];
-    const maxBaseFret = Math.max(...shape.flat());
-    if (maxBaseFret + shift > FRET_COUNT) continue; // shape would run off the edge of the neck
-
-    const notes = [];
-    for (let s = 0; s < NUM_STRINGS; s++) {
-      for (const baseFret of shape[s]) {
-        const fret = baseFret + shift;
-        notes.push({ string: s, fret, isRoot: noteAt(s, fret) === rootPc });
-      }
-    }
-
-    const lowestFret = Math.min(...notes.map((n) => n.fret));
-    const lowestNotes = notes.filter((n) => n.fret === lowestFret);
-    const labelNote = lowestNotes.find((n) => n.isRoot) ?? lowestNotes[0];
-    const interval = (noteAt(labelNote.string, labelNote.fret) - rootPc + 12) % 12;
-
-    positions.push({
-      label: `Position ${i + 1} (starts on ${INTERVAL_NAMES[interval]})`,
-      startFret: lowestFret,
-      notes,
-    });
-  }
-  return positions;
-}
-
-/**
- * Cyclic positions through the chord tones (2 notes/string cap), continuing
- * past one lap of the formula until the fretboard runs out. For a 4-note
- * 7th-chord arpeggio this naturally yields several positions, matching the
- * "7 Position System" shown in the reference chart.
- */
-export function generateArpeggioPositions(rootPc, formula) {
+function generateCyclicBoxPositions(rootPc, formula, maxPositions) {
   const pitchClasses = formulaToPitchClasses(rootPc, formula);
   const perString = eligibleFretsPerString(pitchClasses);
   const positions = [];
   let prevAnchor = -1;
   let degree = 0;
-  // Safety cap so a malformed formula can't spin forever.
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < maxPositions; i++) {
     const pc = pitchClasses[degree % formula.length];
     const anchor = nextAnchor(perString[0], pc, prevAnchor);
     if (anchor === null) break;
@@ -189,6 +133,31 @@ export function generateArpeggioPositions(rootPc, formula) {
     prevAnchor = anchor;
     degree++;
   }
+  return { positions, perString };
+}
+
+/**
+ * Exactly 5 positions (the standard pentatonic "5 shapes" convention),
+ * generated independently for whichever root/quality is selected — not
+ * derived from a relative key. This guarantees Major and Minor Pentatonic
+ * each get their own root-leading Position 1 (root can't be the same note
+ * for both unless the roots themselves match, so their absolute fret
+ * ranges naturally differ — as they must, since e.g. C Major Pentatonic
+ * and C Minor Pentatonic share only the root and 5th).
+ */
+export function generatePentatonicPositions(rootPc, formula) {
+  return generateCyclicBoxPositions(rootPc, formula, 5).positions;
+}
+
+/**
+ * Cyclic positions through the chord tones (2 notes/string cap), continuing
+ * past one lap of the formula until the fretboard runs out. For a 4-note
+ * 7th-chord arpeggio this naturally yields several positions, matching the
+ * "7 Position System" shown in the reference chart.
+ */
+export function generateArpeggioPositions(rootPc, formula) {
+  // Safety cap of 24 iterations so a malformed formula can't spin forever.
+  const { positions, perString } = generateCyclicBoxPositions(rootPc, formula, 24);
 
   // Highly symmetric qualities (e.g. augmented triads only have 4 distinct
   // pitch-class sets total) can anchor root position so high up the neck

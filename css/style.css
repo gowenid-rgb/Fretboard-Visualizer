@@ -1,0 +1,237 @@
+/* Manuscript — a page from a printed guitar method book: hairline
+   engraving, blue-black ink on aged paper, the traditional red for
+   root notes. Fonts are subset from real Windows typefaces (only the
+   glyphs this app uses) and shipped as local woff2 files. */
+
+@font-face {
+  font-family: 'Baskerville Sub';
+  src: url('../fonts/baskerville.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Castellar Sub';
+  src: url('../fonts/castellar.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Courier Sub';
+  src: url('../fonts/courier.woff2') format('woff2');
+  font-display: swap;
+}
+
+:root {
+  --board: #d8d4c1;
+  --paper: #f6f2e4;
+  --ink: #21242c;
+  --ink-soft: #5a6270;
+  --rule: #c3bfab;
+  --red: #a5352a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--board);
+  color: var(--ink);
+  font-family: 'Baskerville Sub', 'Baskerville Old Face', Georgia, serif;
+}
+
+.page-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 40px 24px 60px;
+}
+
+.page {
+  width: 100%;
+  max-width: 1180px;
+  background: var(--paper);
+  box-shadow: 0 40px 70px -40px rgba(0, 0, 0, 0.35);
+  padding: 34px 48px 44px;
+}
+
+.running-head {
+  font-family: 'Castellar Sub', Castellar, serif;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-align: center;
+  padding-bottom: 14px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 26px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--rule);
+  font-family: 'Courier Sub', 'Courier New', monospace;
+}
+
+.brand {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 28px;
+  color: var(--ink);
+  text-wrap: balance;
+  margin-bottom: 8px;
+  font-family: 'Baskerville Sub', 'Baskerville Old Face', Georgia, serif;
+}
+
+.brand small {
+  display: block;
+  font-family: 'Courier Sub', 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-top: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.field label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+select {
+  font: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--ink);
+  border-radius: 0;
+  color: var(--ink);
+  font-family: 'Courier Sub', 'Courier New', monospace;
+  font-size: 14px;
+  padding: 2px 2px 4px;
+  cursor: pointer;
+}
+
+select:focus-visible {
+  outline: none;
+  border-bottom: 2px solid var(--red);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  padding: 9px 18px;
+  font-family: 'Courier Sub', 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.btn-primary:hover { background: var(--red); }
+
+.btn-ghost {
+  background: none;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  padding: 9px 16px;
+  font-family: 'Courier Sub', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.btn-ghost:hover { color: var(--ink); border-color: var(--ink-soft); }
+
+.chips {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Courier Sub', 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--ink-soft);
+  border-bottom: 1px dashed var(--rule);
+  padding: 4px 2px;
+}
+
+.chip .swatch {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+}
+
+.chip button {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-weight: 700;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.chip button:hover { color: var(--red); }
+
+.fretboard-container {
+  overflow-x: auto;
+}
+
+.fretboard-svg {
+  display: block;
+  width: 100%;
+  max-width: 1078px;
+  margin: 0 auto;
+  height: auto;
+}
+
+.string-line { stroke: var(--ink); stroke-width: 1; }
+.fret-line { stroke: var(--ink); stroke-width: 1.1; }
+.nut-line { stroke: var(--ink); stroke-width: 3; }
+.inlay { fill: var(--rule); }
+
+.fret-label {
+  fill: var(--ink-soft);
+  font-family: 'Courier Sub', 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.note-text {
+  font-family: 'Courier Sub', 'Courier New', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.caption {
+  text-align: center;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin: 22px 0 0;
+}
+
+@media (max-width: 720px) {
+  .toolbar { justify-content: center; }
+  .page { padding: 28px 20px 32px; }
+}

@@ -1,0 +1,9 @@
+This app is a tool for learning scales, arpeggios, and chords in all different positions and inversions on the fretboard.  it allows the user to input a scale, arpeggio or chord, and a position or inversion, and the visualizer will show one or more of their inputs overlayed onto the fretboard.  
+
+As shown in the images in this folder - scales will use the 3 note per string configuration, and arpeggios will have all of their different positions available to select one or more positions from.  
+
+The interface:  the center of the screen will show one long horizontal fretboard.  it will start blank, until the user selects from the upper toolbar at the top of the window.  They will be able to select something like "cMaj7 arpeggio" and "position 2" .  position 2 meaning that the arpeggio starts 1 note above the root, and so on.  Userrs will have the abilittiy to  add another scale and position onto the fretboard as an "overlay" to see how multiple scales might overlap eachother.  
+
+
+Alwaays highlilight the Root notes in a different color from the others.
+

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fretboard Visualizer</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page">
+      <div class="running-head">Fretboard Method</div>
+
+      <header class="toolbar">
+        <div class="brand">Fretboard Visualizer<small>Scales, arpeggios &amp; chords for guitar</small></div>
+
+        <div class="field">
+          <label for="root-select">Root</label>
+          <select id="root-select"></select>
+        </div>
+        <div class="field">
+          <label for="type-select">Type</label>
+          <select id="type-select">
+            <option value="scale">Scale</option>
+            <option value="arpeggio">Arpeggio</option>
+            <option value="chord">Chord</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="quality-select">Quality</label>
+          <select id="quality-select"></select>
+        </div>
+        <div class="field">
+          <label for="position-select">Position</label>
+          <select id="position-select"></select>
+        </div>
+
+        <button id="add-overlay-btn" class="btn-primary" type="button">Add to Fretboard</button>
+        <button id="clear-btn" class="btn-ghost" type="button">Clear All</button>
+
+        <div id="overlay-chips" class="chips"></div>
+      </header>
+
+      <div id="fretboard-container" class="fretboard-container"></div>
+
+      <p class="caption">Root notes shown in red, after the tradition of hand-marked fingering charts.</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

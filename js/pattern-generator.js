@@ -38,16 +38,20 @@ function nextAnchor(perString0, pc, afterFret) {
 
 /**
  * Walk strings low->high, at each string taking up to `cap` of that
- * string's eligible frets at-or-above a running threshold (with a small
- * backward tolerance so shapes stay in one tight box), then advancing the
- * threshold to the lowest fret just taken. This is the standard box-shape
- * algorithm behind 3NPS scale grids and multi-note-per-string arpeggio grids.
+ * string's eligible frets at-or-above a running threshold, then advancing
+ * the threshold to the lowest fret just taken. Candidates are never
+ * allowed below the running threshold, which guarantees (since the
+ * threshold starts at `startThreshold` and is non-decreasing) that no
+ * note anywhere in the shape sits at a lower fret than `startThreshold`
+ * itself — i.e. the anchor note is always the lowest-pitched note in the
+ * position, so "Position N starts on the Nth degree" is literally true
+ * rather than just true on the anchor string.
  */
-function walkBox(perString, startThreshold, cap, tolerance, rootPc) {
+function walkBox(perString, startThreshold, cap, rootPc) {
   let threshold = startThreshold;
   const notes = [];
   for (let s = 0; s < NUM_STRINGS; s++) {
-    const candidates = perString[s].filter((f) => f >= threshold - tolerance);
+    const candidates = perString[s].filter((f) => f >= threshold);
     const picked = candidates.slice(0, cap);
     for (const f of picked) {
       notes.push({ string: s, fret: f, isRoot: noteAt(s, f) === rootPc });
@@ -55,6 +59,13 @@ function walkBox(perString, startThreshold, cap, tolerance, rootPc) {
     if (picked.length > 0) threshold = picked[0];
   }
   return notes;
+}
+
+/** True if every string got its full complement of notes (box wasn't cut off by the edge of the fretboard). */
+function isCompleteBox(notes, cap) {
+  const perStringCount = new Array(NUM_STRINGS).fill(0);
+  for (const n of notes) perStringCount[n.string]++;
+  return perStringCount.every((count) => count === cap);
 }
 
 /**
@@ -75,7 +86,10 @@ export function generateScalePositions(rootPc, formula, notesPerString = 3) {
     const pc = pitchClasses[degree];
     const anchor = nextAnchor(perString[0], pc, prevAnchor);
     if (anchor === null) break;
-    const notes = walkBox(perString, anchor, notesPerString, 1, rootPc);
+    const notes = walkBox(perString, anchor, notesPerString, rootPc);
+    // Once a box runs off the edge of the fretboard, every later (higher)
+    // position would too — stop rather than show a half-cut-off shape.
+    if (!isCompleteBox(notes, notesPerString)) break;
     positions.push({
       label: `Position ${positions.length + 1} (starts on ${INTERVAL_NAMES[formula[degree]]})`,
       startFret: anchor,
@@ -89,8 +103,8 @@ export function generateScalePositions(rootPc, formula, notesPerString = 3) {
 /**
  * Cyclic positions through the chord tones (2 notes/string cap), continuing
  * past one lap of the formula until the fretboard runs out. For a 4-note
- * 7th-chord arpeggio over a 22-fret board this naturally yields ~7
- * positions, matching the "7 Position System" shown in the reference chart.
+ * 7th-chord arpeggio this naturally yields several positions, matching the
+ * "7 Position System" shown in the reference chart.
  */
 export function generateArpeggioPositions(rootPc, formula) {
   const pitchClasses = formulaToPitchClasses(rootPc, formula);
@@ -103,7 +117,8 @@ export function generateArpeggioPositions(rootPc, formula) {
     const pc = pitchClasses[degree % formula.length];
     const anchor = nextAnchor(perString[0], pc, prevAnchor);
     if (anchor === null) break;
-    const notes = walkBox(perString, anchor, 2, 1, rootPc);
+    const notes = walkBox(perString, anchor, 2, rootPc);
+    if (!isCompleteBox(notes, 2)) break;
     positions.push({
       label: `Position ${positions.length + 1} (starts on ${INTERVAL_NAMES[formula[degree % formula.length]]})`,
       startFret: anchor,
@@ -112,6 +127,23 @@ export function generateArpeggioPositions(rootPc, formula) {
     prevAnchor = anchor;
     degree++;
   }
+
+  // Highly symmetric qualities (e.g. augmented triads only have 4 distinct
+  // pitch-class sets total) can anchor root position so high up the neck
+  // that no full 2-note-per-string box fits at all. Rather than leave the
+  // quality with zero usable positions, fall back to a 1-note-per-string
+  // reading of the same anchor so there's always at least one honest,
+  // root-anchored position to show.
+  if (positions.length === 0) {
+    const rootAnchor = nextAnchor(perString[0], rootPc, -1);
+    if (rootAnchor !== null) {
+      const notes = walkBox(perString, rootAnchor, 1, rootPc);
+      if (isCompleteBox(notes, 1)) {
+        positions.push({ label: 'Position 1 (starts on Root)', startFret: rootAnchor, notes });
+      }
+    }
+  }
+
   return positions;
 }
 

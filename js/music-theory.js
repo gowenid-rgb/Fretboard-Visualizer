@@ -15,9 +15,9 @@ export const STANDARD_TUNING = [
 ];
 
 export const NUM_STRINGS = STANDARD_TUNING.length;
-// 22 frets gives enough room for all 7 diatonic 3NPS positions and the
+// 24 frets gives enough room for all 7 diatonic 3NPS positions and the
 // cyclic arpeggio positions to fully resolve for every root note.
-export const FRET_COUNT = 22;
+export const FRET_COUNT = 24;
 
 export const SCALE_FORMULAS = {
   'Major (Ionian)': [0, 2, 4, 5, 7, 9, 11],

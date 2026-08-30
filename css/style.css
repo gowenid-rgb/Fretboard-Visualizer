@@ -45,7 +45,7 @@ body {
 
 .page {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1280px;
   background: var(--paper);
   box-shadow: 0 40px 70px -40px rgba(0, 0, 0, 0.35);
   padding: 34px 48px 44px;
@@ -200,7 +200,7 @@ button {
 .fretboard-svg {
   display: block;
   width: 100%;
-  max-width: 1078px;
+  max-width: 1170px;
   margin: 0 auto;
   height: auto;
 }

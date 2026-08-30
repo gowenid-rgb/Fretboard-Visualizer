@@ -1,0 +1,12 @@
+{
+  "name": "fretboard-visualizer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A browser tool for viewing scales, arpeggios, and chords on a guitar fretboard.",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  }
+}

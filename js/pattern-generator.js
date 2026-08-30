@@ -37,26 +37,25 @@ function nextAnchor(perString0, pc, afterFret) {
 }
 
 /**
- * Walk strings low->high, at each string taking up to `cap` of that
- * string's eligible frets at-or-above a running threshold, then advancing
- * the threshold to the lowest fret just taken. Candidates are never
- * allowed below the running threshold, which guarantees (since the
- * threshold starts at `startThreshold` and is non-decreasing) that no
- * note anywhere in the shape sits at a lower fret than `startThreshold`
- * itself — i.e. the anchor note is always the lowest-pitched note in the
- * position, so "Position N starts on the Nth degree" is literally true
- * rather than just true on the anchor string.
+ * For every string, independently take up to `cap` of that string's
+ * eligible frets at-or-above the anchor fret. Using the same fixed anchor
+ * for every string (rather than cascading it forward string-by-string)
+ * guarantees two things at once: no note anywhere in the shape sits below
+ * the anchor — so "Position N starts on the Nth degree" is literally true
+ * — and each string independently grabs its nearest eligible notes, which
+ * keeps the shape as tight as the scale's own note spacing allows instead
+ * of compounding drift when the anchor's exact fret isn't itself eligible
+ * on a later string (the failure mode that made sparser scales like
+ * pentatonics balloon into unrealistically wide, non-CAGED-sized boxes).
  */
-function walkBox(perString, startThreshold, cap, rootPc) {
-  let threshold = startThreshold;
+function walkBox(perString, anchor, cap, rootPc) {
   const notes = [];
   for (let s = 0; s < NUM_STRINGS; s++) {
-    const candidates = perString[s].filter((f) => f >= threshold);
+    const candidates = perString[s].filter((f) => f >= anchor);
     const picked = candidates.slice(0, cap);
     for (const f of picked) {
       notes.push({ string: s, fret: f, isRoot: noteAt(s, f) === rootPc });
     }
-    if (picked.length > 0) threshold = picked[0];
   }
   return notes;
 }

@@ -37,35 +37,60 @@ function nextAnchor(perString0, pc, afterFret) {
 }
 
 /**
- * For every string, independently take up to `cap` of that string's
- * eligible frets at-or-above the anchor fret. Using the same fixed anchor
- * for every string (rather than cascading it forward string-by-string)
- * guarantees two things at once: no note anywhere in the shape sits below
- * the anchor — so "Position N starts on the Nth degree" is literally true
- * — and each string independently grabs its nearest eligible notes, which
- * keeps the shape as tight as the scale's own note spacing allows instead
- * of compounding drift when the anchor's exact fret isn't itself eligible
- * on a later string (the failure mode that made sparser scales like
- * pentatonics balloon into unrealistically wide, non-CAGED-sized boxes).
+ * Traces exactly `notesPerString` consecutive formula degrees per string,
+ * finding the nearest eligible fret on the next string to form realistic
+ * diagonal box shapes rather than clipping to a rigid vertical floor.
  */
-function walkBox(perString, anchor, cap, rootPc) {
+function buildStrictBox(degree, anchor, pitchClasses, rootPc, notesPerString, perString) {
   const notes = [];
+  let prevStringStartFret = anchor;
+
   for (let s = 0; s < NUM_STRINGS; s++) {
-    const candidates = perString[s].filter((f) => f >= anchor);
-    const picked = candidates.slice(0, cap);
-    for (const f of picked) {
-      notes.push({ string: s, fret: f, isRoot: noteAt(s, f) === rootPc });
+    const stringDegrees = [];
+    for (let n = 0; n < notesPerString; n++) {
+      stringDegrees.push((degree + s * notesPerString + n) % pitchClasses.length);
     }
+
+    let firstFret = -1;
+    let minDiff = Infinity;
+    const firstPc = pitchClasses[stringDegrees[0]];
+    
+    for (const f of perString[s]) {
+      if (noteAt(s, f) === firstPc) {
+        const diff = Math.abs(f - prevStringStartFret);
+        if (diff < minDiff) {
+          minDiff = diff;
+          firstFret = f;
+        }
+      }
+    }
+
+    if (firstFret === -1) return null;
+
+    const stringNotes = [{ string: s, fret: firstFret, isRoot: firstPc === rootPc }];
+    let lastFret = firstFret;
+
+    for (let n = 1; n < notesPerString; n++) {
+      const pc = pitchClasses[stringDegrees[n]];
+      let nextFret = -1;
+      for (const f of perString[s]) {
+        if (f > lastFret && noteAt(s, f) === pc) {
+          nextFret = f;
+          break;
+        }
+      }
+      if (nextFret === -1) return null;
+      stringNotes.push({ string: s, fret: nextFret, isRoot: pc === rootPc });
+      lastFret = nextFret;
+    }
+
+    notes.push(...stringNotes);
+    prevStringStartFret = firstFret;
   }
   return notes;
 }
 
-/** True if every string got its full complement of notes (box wasn't cut off by the edge of the fretboard). */
-function isCompleteBox(notes, cap) {
-  const perStringCount = new Array(NUM_STRINGS).fill(0);
-  for (const n of notes) perStringCount[n.string]++;
-  return perStringCount.every((count) => count === cap);
-}
+
 
 /**
  * 7 positions, one per scale degree, in strictly ascending neck order.
@@ -86,53 +111,8 @@ export function generateScalePositions(rootPc, formula) {
     const anchor = nextAnchor(perString[0], pc, prevAnchor);
     if (anchor === null) break;
     
-    const notes = [];
-    let prevStringStartFret = anchor;
-    let complete = true;
-
-    for (let s = 0; s < NUM_STRINGS; s++) {
-      const d0 = (degree + s * 3) % pitchClasses.length;
-      const d1 = (degree + s * 3 + 1) % pitchClasses.length;
-      const d2 = (degree + s * 3 + 2) % pitchClasses.length;
-
-      const pc0 = pitchClasses[d0];
-      const pc1 = pitchClasses[d1];
-      const pc2 = pitchClasses[d2];
-
-      let bestFret0 = -1;
-      let minDiff = Infinity;
-      for (const f of perString[s]) {
-        if (noteAt(s, f) === pc0) {
-          const diff = Math.abs(f - prevStringStartFret);
-          if (diff < minDiff) {
-            minDiff = diff;
-            bestFret0 = f;
-          }
-        }
-      }
-
-      if (bestFret0 === -1) { complete = false; break; }
-
-      let bestFret1 = -1;
-      for (const f of perString[s]) {
-        if (f > bestFret0 && noteAt(s, f) === pc1) { bestFret1 = f; break; }
-      }
-
-      let bestFret2 = -1;
-      for (const f of perString[s]) {
-        if (f > bestFret1 && noteAt(s, f) === pc2) { bestFret2 = f; break; }
-      }
-
-      if (bestFret1 === -1 || bestFret2 === -1) { complete = false; break; }
-
-      notes.push({ string: s, fret: bestFret0, isRoot: pc0 === rootPc });
-      notes.push({ string: s, fret: bestFret1, isRoot: pc1 === rootPc });
-      notes.push({ string: s, fret: bestFret2, isRoot: pc2 === rootPc });
-
-      prevStringStartFret = bestFret0;
-    }
-
-    if (!complete) break;
+    const notes = buildStrictBox(degree, anchor, pitchClasses, rootPc, 3, perString);
+    if (notes === null) break;
 
     positions.push({
       label: `Position ${positions.length + 1} (starts on ${INTERVAL_NAMES[formula[degree]]})`,
@@ -168,8 +148,8 @@ function generateCyclicBoxPositions(rootPc, formula, maxPositions) {
     const pc = pitchClasses[degree % formula.length];
     const anchor = nextAnchor(perString[0], pc, prevAnchor);
     if (anchor === null) break;
-    const notes = walkBox(perString, anchor, 2, rootPc);
-    if (!isCompleteBox(notes, 2)) break;
+    const notes = buildStrictBox(degree % formula.length, anchor, pitchClasses, rootPc, 2, perString);
+    if (notes === null) break;
     positions.push({
       label: `Position ${positions.length + 1} (starts on ${INTERVAL_NAMES[formula[degree % formula.length]]})`,
       startFret: anchor,
@@ -213,8 +193,8 @@ export function generateArpeggioPositions(rootPc, formula) {
   if (positions.length === 0) {
     const rootAnchor = nextAnchor(perString[0], rootPc, -1);
     if (rootAnchor !== null) {
-      const notes = walkBox(perString, rootAnchor, 1, rootPc);
-      if (isCompleteBox(notes, 1)) {
+      const notes = buildStrictBox(0, rootAnchor, pitchClasses, rootPc, 1, perString);
+      if (notes !== null) {
         positions.push({ label: 'Position 1 (starts on Root)', startFret: rootAnchor, notes });
       }
     }

@@ -85,10 +85,55 @@ export function generateScalePositions(rootPc, formula) {
     const pc = pitchClasses[degree];
     const anchor = nextAnchor(perString[0], pc, prevAnchor);
     if (anchor === null) break;
-    const notes = walkBox(perString, anchor, 3, rootPc);
-    // Once a box runs off the edge of the fretboard, every later (higher)
-    // position would too — stop rather than show a half-cut-off shape.
-    if (!isCompleteBox(notes, 3)) break;
+    
+    const notes = [];
+    let prevStringStartFret = anchor;
+    let complete = true;
+
+    for (let s = 0; s < NUM_STRINGS; s++) {
+      const d0 = (degree + s * 3) % pitchClasses.length;
+      const d1 = (degree + s * 3 + 1) % pitchClasses.length;
+      const d2 = (degree + s * 3 + 2) % pitchClasses.length;
+
+      const pc0 = pitchClasses[d0];
+      const pc1 = pitchClasses[d1];
+      const pc2 = pitchClasses[d2];
+
+      let bestFret0 = -1;
+      let minDiff = Infinity;
+      for (const f of perString[s]) {
+        if (noteAt(s, f) === pc0) {
+          const diff = Math.abs(f - prevStringStartFret);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestFret0 = f;
+          }
+        }
+      }
+
+      if (bestFret0 === -1) { complete = false; break; }
+
+      let bestFret1 = -1;
+      for (const f of perString[s]) {
+        if (f > bestFret0 && noteAt(s, f) === pc1) { bestFret1 = f; break; }
+      }
+
+      let bestFret2 = -1;
+      for (const f of perString[s]) {
+        if (f > bestFret1 && noteAt(s, f) === pc2) { bestFret2 = f; break; }
+      }
+
+      if (bestFret1 === -1 || bestFret2 === -1) { complete = false; break; }
+
+      notes.push({ string: s, fret: bestFret0, isRoot: pc0 === rootPc });
+      notes.push({ string: s, fret: bestFret1, isRoot: pc1 === rootPc });
+      notes.push({ string: s, fret: bestFret2, isRoot: pc2 === rootPc });
+
+      prevStringStartFret = bestFret0;
+    }
+
+    if (!complete) break;
+
     positions.push({
       label: `Position ${positions.length + 1} (starts on ${INTERVAL_NAMES[formula[degree]]})`,
       startFret: anchor,
